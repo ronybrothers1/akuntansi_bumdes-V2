@@ -73,9 +73,11 @@ export default function LaporanKeuangan() {
         { aktiva: 'AKTIVA', jumlahAktiva: '', pasiva: 'PASIVA', jumlahPasiva: '' },
         ...Array.from({ length: Math.max(aktiva.length, hutang.length + modal.length) }).map((_, i) => ({
           aktiva: aktiva[i]?.nama || '',
-          jumlahAktiva: aktiva[i]?.jumlah?.toLocaleString('id-ID') || '',
+          jumlahAktiva: aktiva[i]?.jumlah !== undefined ? aktiva[i].jumlah.toLocaleString('id-ID') : '',
           pasiva: i < hutang.length ? hutang[i]?.nama : modal[i - hutang.length]?.nama || '',
-          jumlahPasiva: i < hutang.length ? hutang[i]?.jumlah?.toLocaleString('id-ID') : modal[i - hutang.length]?.jumlah?.toLocaleString('id-ID') || '',
+          jumlahPasiva: i < hutang.length 
+            ? (hutang[i]?.jumlah !== undefined ? hutang[i].jumlah.toLocaleString('id-ID') : '') 
+            : (modal[i - hutang.length]?.jumlah !== undefined ? modal[i - hutang.length].jumlah.toLocaleString('id-ID') : ''),
         })),
         { aktiva: '', jumlahAktiva: '', pasiva: '', jumlahPasiva: '' },
         { aktiva: 'TOTAL AKTIVA', jumlahAktiva: totalAktiva.toLocaleString('id-ID'), pasiva: 'TOTAL PASIVA', jumlahPasiva: totalPasiva.toLocaleString('id-ID') }
@@ -169,9 +171,11 @@ export default function LaporanKeuangan() {
         { aktiva: 'AKTIVA', jumlahAktiva: '', pasiva: 'PASIVA', jumlahPasiva: '' },
         ...Array.from({ length: Math.max(aktiva.length, hutang.length + modal.length) }).map((_, i) => ({
           aktiva: aktiva[i]?.nama || '',
-          jumlahAktiva: aktiva[i]?.jumlah?.toLocaleString('id-ID') || '',
+          jumlahAktiva: aktiva[i]?.jumlah !== undefined ? aktiva[i].jumlah.toLocaleString('id-ID') : '',
           pasiva: i < hutang.length ? hutang[i]?.nama : modal[i - hutang.length]?.nama || '',
-          jumlahPasiva: i < hutang.length ? hutang[i]?.jumlah?.toLocaleString('id-ID') : modal[i - hutang.length]?.jumlah?.toLocaleString('id-ID') || '',
+          jumlahPasiva: i < hutang.length 
+            ? (hutang[i]?.jumlah !== undefined ? hutang[i].jumlah.toLocaleString('id-ID') : '') 
+            : (modal[i - hutang.length]?.jumlah !== undefined ? modal[i - hutang.length].jumlah.toLocaleString('id-ID') : ''),
         })),
         { aktiva: '', jumlahAktiva: '', pasiva: '', jumlahPasiva: '' },
         { aktiva: 'TOTAL AKTIVA', jumlahAktiva: totalAktiva.toLocaleString('id-ID'), pasiva: 'TOTAL PASIVA', jumlahPasiva: totalPasiva.toLocaleString('id-ID') }

@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Settings, BookOpen, FileText, 
-  BarChart3, Menu, X, FileSpreadsheet
+  BarChart3, Menu, X, FileSpreadsheet, LogOut
 } from 'lucide-react';
 import { useStore } from '../store';
+import { useAuth } from '../auth/AuthContext';
 
 const SidebarItem = ({ icon: Icon, label, to, isActive, onClick }: any) => (
   <Link
@@ -25,11 +26,13 @@ export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { config } = useStore();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
     { icon: Settings, label: 'Setup Awal', to: '/setup' },
     { icon: BookOpen, label: 'Buku Kas Harian', to: '/kas-harian' },
+    { icon: FileText, label: 'Jurnal Memorial', to: '/jurnal-memorial' },
     { icon: FileText, label: 'Jurnal', to: '/jurnal' },
     { icon: FileSpreadsheet, label: 'Buku Pembantu', to: '/buku-pembantu' },
     { icon: BarChart3, label: 'Mutasi Neraca', to: '/mutasi-neraca' },
@@ -80,6 +83,19 @@ export default function Layout() {
         </nav>
 
         <div className="p-4 border-t border-gray-800">
+          <div className="mb-4 flex items-center justify-between bg-gray-800 rounded-lg p-3">
+            <div className="truncate pr-2">
+              <p className="text-xs text-gray-400">Login sebagai:</p>
+              <p className="text-sm font-medium text-white truncate" title={user?.email}>{user?.email}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md transition-colors"
+              title="Keluar"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
           <div className="bg-gray-800 rounded-lg p-3 text-xs text-gray-400 text-center">
             Sistem Akuntansi BUMDes v1.0<br/>
             Dikembangkan oleh<br/>

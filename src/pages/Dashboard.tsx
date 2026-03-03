@@ -1,12 +1,12 @@
 import React from 'react';
 import { useStore } from '../store';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatDate } from '../utils/format';
 import { calculateJurnal, calculateBukuBesar, calculateLabaRugi, calculateNeraca, calculateArusKas, calculateRasioKeuangan } from '../utils/accounting';
 import { exportConsolidatedExcel } from '../utils/export';
 import { 
   Wallet, TrendingUp, TrendingDown, DollarSign, 
   PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Download
+  Download, Bell, Calendar
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -31,14 +31,41 @@ ChartJS.register(
 );
 
 export default function Dashboard() {
-  const { config, akun, saldoAwal, transaksiKas, jurnalMemorial, shuConfig } = useStore();
+  const { config, akun, saldoAwal, transaksiKas, jurnalMemorial, shuConfig, piutang, hutang } = useStore();
 
   const { jum, juk, jm } = calculateJurnal(transaksiKas, jurnalMemorial);
   const mutasiBukuBesar = calculateBukuBesar(akun, saldoAwal, transaksiKas, jurnalMemorial);
-  const { pendapatan, biaya, totalPendapatan, totalBiaya, labaRugi } = calculateLabaRugi(akun, mutasiBukuBesar);
-  const { aktiva, hutang, modal, totalAktiva, totalPasiva } = calculateNeraca(akun, mutasiBukuBesar, labaRugi);
+  const { pendapatan, hpp, biaya, totalPendapatan, totalHpp, labaKotor, totalBiaya, labaRugi } = calculateLabaRugi(akun, mutasiBukuBesar);
+  const { aktiva, hutang: neracaHutang, modal, totalAktiva, totalPasiva } = calculateNeraca(akun, mutasiBukuBesar, labaRugi);
   const { detailOperasi, detailInvestasi, detailPendanaan, arusKasOperasi, arusKasInvestasi, arusKasPendanaan, kenaikanPenurunanKas } = calculateArusKas(akun, transaksiKas);
-  const rasio = calculateRasioKeuangan(aktiva, hutang, modal, totalAktiva, totalPasiva, labaRugi, totalPendapatan);
+  const rasio = calculateRasioKeuangan(aktiva, neracaHutang, modal, totalAktiva, totalPasiva, labaRugi, totalPendapatan);
+
+  // Calculate Jatuh Tempo
+  const getJatuhTempo = (items: any[], type: 'Piutang' | 'Hutang') => {
+    return items.map(item => {
+      const angsuranKe = item.angsuran.length + 1;
+      if (angsuranKe > item.jangkaWaktu) return null; // Lunas
+
+      const tglAkad = new Date(item.tanggalAkad);
+      const tglJatuhTempo = new Date(tglAkad.getFullYear(), tglAkad.getMonth() + angsuranKe, tglAkad.getDate());
+      
+      const angsuranPerBulan = (item.jumlahPinjaman / item.jangkaWaktu) + (item.jumlahPinjaman * (item.bungaPersen/100));
+
+      return {
+        id: item.id,
+        nama: type === 'Piutang' ? item.nama : item.namaKreditur,
+        type,
+        jatuhTempo: tglJatuhTempo,
+        jumlah: angsuranPerBulan,
+        angsuranKe,
+        jangkaWaktu: item.jangkaWaktu
+      };
+    }).filter(Boolean);
+  };
+
+  const semuaJatuhTempo = [...getJatuhTempo(piutang, 'Piutang'), ...getJatuhTempo(hutang, 'Hutang')]
+    .sort((a, b) => a!.jatuhTempo.getTime() - b!.jatuhTempo.getTime())
+    .slice(0, 5); // Ambil 5 terdekat
 
   const handleExportSemua = () => {
     const modalAwal = saldoAwal.filter(s => akun.find(a => a.kode === s.kodeAkun)?.kategori === 'MODAL')
@@ -59,8 +86,13 @@ export default function Dashboard() {
           ...pendapatan.map(p => ({ uraian: p.nama, jumlah: p.jumlah })),
           { uraian: 'Total Pendapatan', jumlah: totalPendapatan },
           { uraian: '', jumlah: '' },
+          ...hpp.map(h => ({ uraian: h.nama, jumlah: h.jumlah })),
+          { uraian: 'Total HPP', jumlah: -totalHpp },
+          { uraian: '', jumlah: '' },
+          { uraian: 'LABA KOTOR', jumlah: labaKotor },
+          { uraian: '', jumlah: '' },
           ...biaya.map(b => ({ uraian: b.nama, jumlah: b.jumlah })),
-          { uraian: 'Total Biaya', jumlah: totalBiaya },
+          { uraian: 'Total Biaya', jumlah: -totalBiaya },
           { uraian: '', jumlah: '' },
           { uraian: 'SISA HASIL USAHA (SHU) BERSIH', jumlah: labaRugi }
         ]
@@ -105,11 +137,11 @@ export default function Dashboard() {
         ],
         data: [
           { aktiva: 'AKTIVA', jumlahAktiva: '', pasiva: 'PASIVA', jumlahPasiva: '' },
-          ...Array.from({ length: Math.max(aktiva.length, hutang.length + modal.length) }).map((_, i) => ({
+          ...Array.from({ length: Math.max(aktiva.length, neracaHutang.length + modal.length) }).map((_, i) => ({
             aktiva: aktiva[i]?.nama || '',
             jumlahAktiva: aktiva[i]?.jumlah ?? '',
-            pasiva: i < hutang.length ? hutang[i]?.nama : modal[i - hutang.length]?.nama || '',
-            jumlahPasiva: i < hutang.length ? hutang[i]?.jumlah : modal[i - hutang.length]?.jumlah ?? '',
+            pasiva: i < neracaHutang.length ? neracaHutang[i]?.nama : modal[i - neracaHutang.length]?.nama || '',
+            jumlahPasiva: i < neracaHutang.length ? neracaHutang[i]?.jumlah : modal[i - neracaHutang.length]?.jumlah ?? '',
           })),
           { aktiva: '', jumlahAktiva: '', pasiva: '', jumlahPasiva: '' },
           { aktiva: 'TOTAL AKTIVA', jumlahAktiva: totalAktiva, pasiva: 'TOTAL PASIVA', jumlahPasiva: totalPasiva }
@@ -312,21 +344,73 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* About App Card */}
-      <div className="bg-gray-900 text-white rounded-xl p-6 shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-green-500 rounded-full opacity-20 blur-xl"></div>
-        <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-blue-500 rounded-full opacity-20 blur-xl"></div>
-        
-        <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-          <span className="text-green-400">🌿</span> Sistem Akuntansi BUMDes v1.0
-        </h3>
-        <p className="text-gray-300 text-sm mb-4 max-w-2xl">
-          Aplikasi akuntansi digital untuk Badan Usaha Milik Desa (BUMDes). 
-          Dirancang untuk memudahkan pencatatan keuangan secara otomatis dan akurat.
-        </p>
-        <div className="pt-4 border-t border-gray-800 text-xs text-gray-400">
-          <p>Dikembangkan oleh: <span className="text-white font-medium">Imam Sahroni Darmawan</span></p>
-          <p className="mt-1">Hak cipta dilindungi. Tidak untuk diperjualbelikan.</p>
+      {/* Jatuh Tempo & About App */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Jatuh Tempo Reminders */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Bell size={20} className="text-amber-500" />
+              <h3 className="text-lg font-semibold text-gray-800">Pengingat Jatuh Tempo</h3>
+            </div>
+            <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+              {semuaJatuhTempo.length} Tagihan Terdekat
+            </span>
+          </div>
+          
+          {semuaJatuhTempo.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Calendar size={48} className="mx-auto mb-3 text-gray-300" />
+              <p>Tidak ada tagihan yang mendekati jatuh tempo.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {semuaJatuhTempo.map((item, idx) => {
+                const isLate = item.jatuhTempo < new Date();
+                const isPiutang = item.type === 'Piutang';
+                return (
+                  <div key={idx} className={`flex items-center justify-between p-3 rounded-lg border ${isLate ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-10 rounded-full ${isPiutang ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
+                      <div>
+                        <p className="font-medium text-gray-800">{item.nama}</p>
+                        <p className="text-xs text-gray-500">
+                          {isPiutang ? 'Piutang' : 'Hutang'} • Angsuran {item.angsuranKe}/{item.jangkaWaktu}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono font-bold text-gray-900">{formatCurrency(item.jumlah)}</p>
+                      <p className={`text-xs font-medium ${isLate ? 'text-red-600' : 'text-gray-500'}`}>
+                        {isLate ? 'Terlewat: ' : 'Jatuh tempo: '} 
+                        {formatDate(item.jatuhTempo.toISOString().split('T')[0])}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* About App Card */}
+        <div className="bg-gray-900 text-white rounded-xl p-6 shadow-lg relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-green-500 rounded-full opacity-20 blur-xl"></div>
+            <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-blue-500 rounded-full opacity-20 blur-xl"></div>
+            
+            <h3 className="text-xl font-bold mb-2 flex items-center gap-2 relative z-10">
+              <span className="text-green-400">🌿</span> Sistem Akuntansi BUMDes v1.0
+            </h3>
+            <p className="text-gray-300 text-sm mb-4 relative z-10">
+              Aplikasi akuntansi digital untuk Badan Usaha Milik Desa (BUMDes). 
+              Dirancang untuk memudahkan pencatatan keuangan secara otomatis dan akurat.
+            </p>
+          </div>
+          <div className="pt-4 border-t border-gray-800 text-xs text-gray-400 relative z-10">
+            <p>Dikembangkan oleh: <span className="text-white font-medium">Imam Sahroni Darmawan</span></p>
+            <p className="mt-1">Hak cipta dilindungi. Tidak untuk diperjualbelikan.</p>
+          </div>
         </div>
       </div>
     </div>

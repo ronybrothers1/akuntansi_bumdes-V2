@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { Save, Plus, Trash2, AlertTriangle, Database } from 'lucide-react';
-import { UnitUsaha, SaldoAwal } from '../types';
+import { UnitUsaha, SaldoAwal, Akun } from '../types';
 import { DUMMY_SALDO_AWAL, DUMMY_TRANSAKSI, DUMMY_INVENTARIS, DUMMY_PERSEDIAAN, DUMMY_PIUTANG } from '../utils/dummyData';
 
 export default function Setup() {
-  const { config, setConfig, unitUsaha, setUnitUsaha, akun, saldoAwal, setSaldoAwal, addTransaksiKas, addInventaris, addPersediaan, addPiutang, resetData } = useStore();
+  const { config, setConfig, unitUsaha, setUnitUsaha, akun, addAkun, updateAkun, deleteAkun, saldoAwal, setSaldoAwal, addTransaksiKas, addInventaris, addPersediaan, addPiutang, resetData } = useStore();
   
   const [localConfig, setLocalConfig] = useState(config);
   const [localUnitUsaha, setLocalUnitUsaha] = useState<UnitUsaha[]>(unitUsaha);
   const [localSaldoAwal, setLocalSaldoAwal] = useState<SaldoAwal[]>([]);
+  const [localAkun, setLocalAkun] = useState<(Akun & { isNew?: boolean })[]>([]);
+
+  useEffect(() => {
+    setLocalAkun(akun);
+  }, [akun]);
 
   useEffect(() => {
     setLocalSaldoAwal(
@@ -42,11 +47,12 @@ export default function Setup() {
     const newId = Math.random().toString(36).substr(2, 9);
     // Generate next available codes
     const nextPendapatan = `4${localUnitUsaha.length + 1}`;
-    const nextBiaya = `5${localUnitUsaha.length + 1}`;
+    const nextHpp = `5${localUnitUsaha.length + 1}0`; // Example HPP code
+    const nextBiaya = `6${localUnitUsaha.length + 1}`;
     
     setLocalUnitUsaha([
       ...localUnitUsaha, 
-      { id: newId, nama: '', kodePendapatan: nextPendapatan, kodeBiaya: nextBiaya }
+      { id: newId, nama: '', kodePendapatan: nextPendapatan, kodeHpp: nextHpp, kodeBiaya: nextBiaya }
     ]);
   };
 
@@ -67,6 +73,43 @@ export default function Setup() {
     
     setSaldoAwal(localSaldoAwal);
     alert('Saldo Awal berhasil disimpan!');
+  };
+
+  const handleAddAkun = () => {
+    setLocalAkun([
+      ...localAkun,
+      { kode: '', nama: '', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: false, isNew: true }
+    ]);
+  };
+
+  const handleSaveAkun = (a: Akun & { isNew?: boolean }) => {
+    if (!a.kode || !a.nama) {
+      alert('Kode dan Nama Akun harus diisi!');
+      return;
+    }
+    
+    if (a.isNew) {
+      if (akun.find(ak => ak.kode === a.kode)) {
+        alert('Kode Akun sudah digunakan!');
+        return;
+      }
+      const { isNew, ...newAkun } = a;
+      addAkun(newAkun);
+      alert('Akun baru berhasil ditambahkan!');
+    } else {
+      updateAkun(a.kode, a);
+      alert('Akun berhasil diupdate!');
+    }
+  };
+
+  const handleDeleteAkun = (a: Akun & { isNew?: boolean }) => {
+    if (window.confirm('Yakin ingin menghapus akun ini?')) {
+      if (a.isNew) {
+        setLocalAkun(localAkun.filter(ak => ak !== a));
+      } else {
+        deleteAkun(a.kode);
+      }
+    }
   };
 
   return (
@@ -224,6 +267,7 @@ export default function Setup() {
                 <tr className="bg-gray-100 text-gray-700 text-sm">
                   <th className="p-3 border-b font-semibold">Nama Unit Usaha</th>
                   <th className="p-3 border-b font-semibold w-32">Kode Pendapatan</th>
+                  <th className="p-3 border-b font-semibold w-32">Kode HPP</th>
                   <th className="p-3 border-b font-semibold w-32">Kode Biaya</th>
                   <th className="p-3 border-b font-semibold w-16 text-center">Aksi</th>
                 </tr>
@@ -255,6 +299,14 @@ export default function Setup() {
                     <td className="p-2">
                       <input 
                         type="text" 
+                        value={u.kodeHpp}
+                        readOnly
+                        className="w-full px-3 py-1.5 bg-gray-100 border border-gray-300 rounded text-gray-500 font-mono"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input 
+                        type="text" 
                         value={u.kodeBiaya}
                         readOnly
                         className="w-full px-3 py-1.5 bg-gray-100 border border-gray-300 rounded text-gray-500 font-mono"
@@ -276,10 +328,136 @@ export default function Setup() {
         </div>
       </section>
 
-      {/* 3. SALDO AWAL */}
+      {/* 3. DAFTAR AKUN */}
       <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-800">3. Saldo Awal Neraca</h2>
+          <h2 className="text-lg font-semibold text-gray-800">3. Daftar Akun (Chart of Accounts)</h2>
+          <button 
+            onClick={handleAddAkun}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+          >
+            <Plus size={16} /> Tambah Akun
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4 flex items-start gap-3 text-sm">
+            <AlertTriangle size={20} className="shrink-0 mt-0.5" />
+            <p>Akun dengan latar belakang abu-abu adalah akun sistem (bawaan) yang tidak dapat dihapus atau diubah kodenya. Anda dapat menambahkan akun baru secara manual sesuai kebutuhan BUMDes.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700 text-sm">
+                  <th className="p-3 border-b font-semibold w-24">Kode</th>
+                  <th className="p-3 border-b font-semibold">Nama Akun</th>
+                  <th className="p-3 border-b font-semibold w-40">Kategori</th>
+                  <th className="p-3 border-b font-semibold w-32 text-center">Saldo Normal</th>
+                  <th className="p-3 border-b font-semibold w-24 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {localAkun.map((a, i) => (
+                  <tr key={a.isNew ? `new-${i}` : a.kode} className={`border-b ${a.isSystem ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
+                    <td className="p-2">
+                      <input 
+                        type="text" 
+                        value={a.kode}
+                        readOnly={a.isSystem || !a.isNew}
+                        onChange={e => {
+                          const newAkun = [...localAkun];
+                          newAkun[i].kode = e.target.value;
+                          setLocalAkun(newAkun);
+                        }}
+                        className={`w-full px-3 py-1.5 border rounded font-mono ${a.isSystem || !a.isNew ? 'bg-transparent border-transparent text-gray-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'}`}
+                        placeholder="Kode"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input 
+                        type="text" 
+                        value={a.nama}
+                        readOnly={a.isSystem}
+                        onChange={e => {
+                          const newAkun = [...localAkun];
+                          newAkun[i].nama = e.target.value;
+                          setLocalAkun(newAkun);
+                        }}
+                        className={`w-full px-3 py-1.5 border rounded ${a.isSystem ? 'bg-transparent border-transparent text-gray-700' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'}`}
+                        placeholder="Nama Akun"
+                      />
+                    </td>
+                    <td className="p-2">
+                      {a.isSystem ? (
+                        <span className="px-3 py-1.5 text-gray-600 text-sm">{a.kategori}</span>
+                      ) : (
+                        <select
+                          value={a.kategori}
+                          onChange={e => {
+                            const newAkun = [...localAkun];
+                            newAkun[i].kategori = e.target.value as any;
+                            setLocalAkun(newAkun);
+                          }}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 text-sm"
+                        >
+                          <option value="AKTIVA">AKTIVA</option>
+                          <option value="HUTANG">HUTANG</option>
+                          <option value="MODAL">MODAL</option>
+                          <option value="PENDAPATAN">PENDAPATAN</option>
+                          <option value="HPP">HPP</option>
+                          <option value="BIAYA">BIAYA</option>
+                        </select>
+                      )}
+                    </td>
+                    <td className="p-2 text-center">
+                      {a.isSystem ? (
+                        <span className="px-3 py-1.5 text-gray-600 font-mono">{a.saldoNormal}</span>
+                      ) : (
+                        <select
+                          value={a.saldoNormal}
+                          onChange={e => {
+                            const newAkun = [...localAkun];
+                            newAkun[i].saldoNormal = e.target.value as 'D' | 'K';
+                            setLocalAkun(newAkun);
+                          }}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 text-sm font-mono text-center"
+                        >
+                          <option value="D">D</option>
+                          <option value="K">K</option>
+                        </select>
+                      )}
+                    </td>
+                    <td className="p-2 text-center">
+                      {!a.isSystem && (
+                        <div className="flex justify-center gap-1">
+                          <button 
+                            onClick={() => handleSaveAkun(a)}
+                            className="text-green-600 hover:text-green-800 p-1.5 rounded hover:bg-green-50"
+                            title="Simpan Akun"
+                          >
+                            <Save size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteAkun(a)}
+                            className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50"
+                            title="Hapus Akun"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. SALDO AWAL */}
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-800">4. Saldo Awal Neraca</h2>
           <button 
             onClick={handleSaveSaldoAwal}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"

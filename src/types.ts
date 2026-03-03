@@ -26,6 +26,7 @@ export type Akun = {
   nama: string;
   kategori: 'AKTIVA' | 'HUTANG' | 'MODAL' | 'PENDAPATAN' | 'HPP' | 'BIAYA';
   saldoNormal: 'D' | 'K';
+  isSystem?: boolean;
 };
 
 export type SaldoAwal = {

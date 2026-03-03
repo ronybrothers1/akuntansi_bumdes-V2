@@ -1,27 +1,27 @@
 import { Akun, UnitUsaha, ShuConfig, BumdesConfig } from './types';
 
 export const DEFAULT_AKUN: Akun[] = [
-  { kode: '11', nama: 'Kas', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '12', nama: 'Bank', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '13', nama: 'Piutang Dagang', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '14', nama: 'Persediaan Barang Dagang', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '15', nama: 'Persediaan Gas', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '16', nama: 'Peralatan', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '17', nama: 'Sewa Dibayar Dimuka', kategori: 'AKTIVA', saldoNormal: 'D' },
-  { kode: '18', nama: 'Akumulasi Penyusutan', kategori: 'AKTIVA', saldoNormal: 'K' },
-  { kode: '19', nama: 'Aset Tak Berwujud', kategori: 'AKTIVA', saldoNormal: 'D' },
+  { kode: '11', nama: 'Kas', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '12', nama: 'Bank', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '13', nama: 'Piutang Dagang', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '14', nama: 'Persediaan Barang Dagang', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '15', nama: 'Persediaan Gas', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '16', nama: 'Peralatan', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '17', nama: 'Sewa Dibayar Dimuka', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
+  { kode: '18', nama: 'Akumulasi Penyusutan', kategori: 'AKTIVA', saldoNormal: 'K', isSystem: true },
+  { kode: '19', nama: 'Aset Tak Berwujud', kategori: 'AKTIVA', saldoNormal: 'D', isSystem: true },
   
-  { kode: '21', nama: 'Hutang Usaha', kategori: 'HUTANG', saldoNormal: 'K' },
-  { kode: '22', nama: 'Simpanan Anggota', kategori: 'HUTANG', saldoNormal: 'K' },
-  { kode: '23', nama: 'Hutang Bank', kategori: 'HUTANG', saldoNormal: 'K' },
+  { kode: '21', nama: 'Hutang Usaha', kategori: 'HUTANG', saldoNormal: 'K', isSystem: true },
+  { kode: '22', nama: 'Simpanan Anggota', kategori: 'HUTANG', saldoNormal: 'K', isSystem: true },
+  { kode: '23', nama: 'Hutang Bank', kategori: 'HUTANG', saldoNormal: 'K', isSystem: true },
   
-  { kode: '31', nama: 'Simpanan Pokok', kategori: 'MODAL', saldoNormal: 'K' },
-  { kode: '32', nama: 'Simpanan Wajib', kategori: 'MODAL', saldoNormal: 'K' },
-  { kode: '33', nama: 'Hibah Desa', kategori: 'MODAL', saldoNormal: 'K' },
-  { kode: '34', nama: 'Laba Ditahan', kategori: 'MODAL', saldoNormal: 'K' },
-  { kode: '35', nama: 'Laba Tahun Berjalan', kategori: 'MODAL', saldoNormal: 'K' },
+  { kode: '31', nama: 'Simpanan Pokok', kategori: 'MODAL', saldoNormal: 'K', isSystem: true },
+  { kode: '32', nama: 'Simpanan Wajib', kategori: 'MODAL', saldoNormal: 'K', isSystem: true },
+  { kode: '33', nama: 'Hibah Desa', kategori: 'MODAL', saldoNormal: 'K', isSystem: true },
+  { kode: '34', nama: 'Laba Ditahan', kategori: 'MODAL', saldoNormal: 'K', isSystem: true },
+  { kode: '35', nama: 'Laba Tahun Berjalan', kategori: 'MODAL', saldoNormal: 'K', isSystem: true },
   
-  { kode: '59', nama: 'Biaya Operasional Pengurus / Biaya Lain-lain', kategori: 'BIAYA', saldoNormal: 'D' },
+  { kode: '59', nama: 'Biaya Operasional Pengurus / Biaya Lain-lain', kategori: 'BIAYA', saldoNormal: 'D', isSystem: true },
 ];
 
 export const DEFAULT_UNIT_USAHA: UnitUsaha[] = [

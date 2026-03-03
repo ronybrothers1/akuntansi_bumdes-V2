@@ -1,10 +1,50 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { 
   BumdesConfig, UnitUsaha, Akun, SaldoAwal, TransaksiKas, 
   Inventaris, Persediaan, Piutang, Hutang, JurnalMemorial, ShuConfig 
 } from './types';
 import { DEFAULT_AKUN, DEFAULT_UNIT_USAHA, DEFAULT_SHU_CONFIG, DEFAULT_CONFIG } from './constants';
+
+const customStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    const token = localStorage.getItem('bumdes_token');
+    if (!token) return null;
+    
+    try {
+      const response = await fetch('/api/storage', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.data ? JSON.stringify(data.data) : null;
+      }
+    } catch (error) {
+      console.error('Failed to fetch storage', error);
+    }
+    return null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    const token = localStorage.getItem('bumdes_token');
+    if (!token) return;
+    
+    try {
+      await fetch('/api/storage', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ data: JSON.parse(value) })
+      });
+    } catch (error) {
+      console.error('Failed to save storage', error);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    // We don't really need to remove it from backend, but we could
+  }
+};
 
 interface AppState {
   config: BumdesConfig;
@@ -22,6 +62,9 @@ interface AppState {
   setConfig: (config: BumdesConfig) => void;
   setUnitUsaha: (units: UnitUsaha[]) => void;
   setAkun: (akun: Akun[]) => void;
+  addAkun: (akun: Akun) => void;
+  updateAkun: (kode: string, akun: Akun) => void;
+  deleteAkun: (kode: string) => void;
   setSaldoAwal: (saldo: SaldoAwal[]) => void;
   addTransaksiKas: (transaksi: TransaksiKas) => void;
   updateTransaksiKas: (id: string, transaksi: TransaksiKas) => void;
@@ -45,30 +88,36 @@ interface AppState {
   resetData: () => void;
 }
 
-const generateAkunFromUnitUsaha = (units: UnitUsaha[]): Akun[] => {
+const generateAkunFromUnitUsaha = (units: UnitUsaha[], existingAkun: Akun[] = []): Akun[] => {
   const akunPendapatan: Akun[] = units.map(u => ({
     kode: u.kodePendapatan,
     nama: `Pendapatan ${u.nama}`,
     kategori: 'PENDAPATAN',
-    saldoNormal: 'K'
+    saldoNormal: 'K',
+    isSystem: true
   }));
   const akunHpp: Akun[] = units.map(u => ({
     kode: u.kodeHpp,
     nama: `HPP ${u.nama}`,
     kategori: 'HPP',
-    saldoNormal: 'D'
+    saldoNormal: 'D',
+    isSystem: true
   }));
   const akunBiaya: Akun[] = units.map(u => ({
     kode: u.kodeBiaya,
     nama: `Biaya ${u.nama}`,
     kategori: 'BIAYA',
-    saldoNormal: 'D'
+    saldoNormal: 'D',
+    isSystem: true
   }));
   
   // Sort default akun
   const defaultAkun = [...DEFAULT_AKUN];
   
-  return [...defaultAkun, ...akunPendapatan, ...akunHpp, ...akunBiaya].sort((a, b) => a.kode.localeCompare(b.kode));
+  // Get custom accounts (not system)
+  const customAkun = existingAkun.filter(a => !a.isSystem);
+  
+  return [...defaultAkun, ...akunPendapatan, ...akunHpp, ...akunBiaya, ...customAkun].sort((a, b) => a.kode.localeCompare(b.kode));
 };
 
 export const useStore = create<AppState>()(
@@ -89,9 +138,18 @@ export const useStore = create<AppState>()(
       setConfig: (config) => set({ config }),
       setUnitUsaha: (unitUsaha) => set((state) => ({ 
         unitUsaha, 
-        akun: generateAkunFromUnitUsaha(unitUsaha) 
+        akun: generateAkunFromUnitUsaha(unitUsaha, state.akun) 
       })),
       setAkun: (akun) => set({ akun }),
+      addAkun: (newAkun) => set((state) => ({ 
+        akun: [...state.akun, newAkun].sort((a, b) => a.kode.localeCompare(b.kode)) 
+      })),
+      updateAkun: (kode, updatedAkun) => set((state) => ({
+        akun: state.akun.map((a) => (a.kode === kode ? updatedAkun : a)).sort((a, b) => a.kode.localeCompare(b.kode)),
+      })),
+      deleteAkun: (kode) => set((state) => ({
+        akun: state.akun.filter((a) => a.kode !== kode),
+      })),
       setSaldoAwal: (saldoAwal) => set({ saldoAwal }),
       addTransaksiKas: (transaksi) => set((state) => ({ transaksiKas: [...state.transaksiKas, transaksi] })),
       updateTransaksiKas: (id, transaksi) => set((state) => ({
@@ -152,6 +210,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'bumdes-storage',
+      storage: createJSONStorage(() => customStorage),
     }
   )
 );
